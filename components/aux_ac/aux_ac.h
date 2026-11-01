@@ -813,6 +813,8 @@ namespace esphome
 
             // время последнего запроса статуса у кондея
             uint32_t _dataMillis;
+            std::function<void(const uint8_t *, size_t)> _on_raw_frame{nullptr};
+
             // периодичность обновления статуса кондея, по дефолту AC_STATES_REQUEST_INTERVAL
             uint32_t _update_period = Constants::AC_STATES_REQUEST_INTERVAL;
 
@@ -1357,6 +1359,10 @@ namespace esphome
 
                 // вначале выводим полученный пакет в лог, чтобы он шел до информации об ответах и т.п.
                 _debugPrintPacket(&_inPacket, ESPHOME_LOG_LEVEL_DEBUG, __LINE__);
+
+                // отдаём принятый пакет подписчику целиком, не разбирая его
+                if (_on_raw_frame)
+                    _on_raw_frame(_inPacket.data, _inPacket.bytesLoaded);
 
                 // разбираем тип пакета
                 switch (_inPacket.header->packet_type)
@@ -3556,6 +3562,9 @@ namespace esphome
                     dsp = AC_DISPLAY_OFF;
                 return _displaySequence(dsp);
             }
+
+            // подписка на все принятые пакеты: указатель на пакет и его длина, вызывается из loop()
+            void set_on_raw_frame(std::function<void(const uint8_t *, size_t)> &&callback) { _on_raw_frame = std::move(callback); }
 
             // отправляет сплиту заданный набор байт
             // Перед отправкой:
