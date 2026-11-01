@@ -614,6 +614,15 @@ namespace esphome
             AC_MILDEW_UNTOUCHED = 0xFF
         };
 
+// Электрический дополнительный нагрев (кнопка ТЭН на пульте YKR-L/201E). Работает только в режиме HEAT.
+#define AC_AUX_HEAT_MASK 0b00010000
+        enum ac_aux_heat : uint8_t
+        {
+            AC_AUX_HEAT_OFF = 0x00,
+            AC_AUX_HEAT_ON = 0x10,
+            AC_AUX_HEAT_UNTOUCHED = 0xFF
+        };
+
 // маска счетчика минут прошедших с последней команды
 // https://github.com/GrKoR/AUX_HVAC_Protocol#packet_cmd_11_b12
 // GK: define убрал, т.к. считаю, что сбрасывать счетчик не надо.
@@ -710,6 +719,7 @@ namespace esphome
             bool defrost;                    // режим разморозки внешнего блока (накопление тепла + прогрев испарителя)
             ac_powLim_state power_lim_state; // статус ограничения мощности инвертора
             uint8_t power_lim_value;         // значение ограничения мощности инвертора
+            ac_aux_heat aux_heat;            // дополнительный электронагрев
         };
 
         typedef ac_command_t ac_state_t; // текущее состояние параметров кондея можно хранить в таком же формате, как и комманды
@@ -1110,6 +1120,7 @@ namespace esphome
             void _clearCommand(ac_command_t *cmd)
             {
                 cmd->clean = AC_CLEAN_UNTOUCHED;
+                cmd->aux_heat = AC_AUX_HEAT_UNTOUCHED;
                 cmd->display = AC_DISPLAY_UNTOUCHED;
                 cmd->fanMute = AC_FANMUTE_UNTOUCHED;
                 cmd->fanSpeed = AC_FANSPEED_UNTOUCHED;
@@ -1506,6 +1517,10 @@ namespace esphome
                         stateByte = small_info_body->status & AC_CLEAN_MASK;
                         stateChangedFlag = stateChangedFlag || (_current_ac_state.clean != (ac_clean)stateByte);
                         _current_ac_state.clean = (ac_clean)stateByte;
+
+                        stateByte = small_info_body->status & AC_AUX_HEAT_MASK;
+                        stateChangedFlag = stateChangedFlag || (_current_ac_state.aux_heat != (ac_aux_heat)stateByte);
+                        _current_ac_state.aux_heat = (ac_aux_heat)stateByte;
 
                         stateByte = small_info_body->display_and_mildew & AC_DISPLAY_MASK;
                         stateChangedFlag = stateChangedFlag || (_current_ac_state.display != (ac_display)stateByte);
@@ -1984,6 +1999,12 @@ namespace esphome
                 if (cmd->sleep != AC_SLEEP_UNTOUCHED)
                 {
                     pack->body[7] = (pack->body[7] & ~AC_SLEEP_MASK) | cmd->sleep;
+                }
+
+                // дополнительный электронагрев
+                if (cmd->aux_heat != AC_AUX_HEAT_UNTOUCHED)
+                {
+                    pack->body[10] = (pack->body[10] & ~AC_AUX_HEAT_MASK) | cmd->aux_heat;
                 }
 
                 // питание вкл/выкл
@@ -3562,6 +3583,16 @@ namespace esphome
                     dsp = AC_DISPLAY_OFF;
                 return _displaySequence(dsp);
             }
+
+            // дополнительный электронагрев (ТЭН)
+            bool auxHeatSequence(bool on)
+            {
+                ac_command_t cmd;
+                _clearCommand(&cmd);
+                cmd.aux_heat = on ? AC_AUX_HEAT_ON : AC_AUX_HEAT_OFF;
+                return commandSequence(&cmd);
+            }
+            bool get_aux_heat() { return _current_ac_state.aux_heat == AC_AUX_HEAT_ON; }
 
             // подписка на все принятые пакеты: указатель на пакет и его длина, вызывается из loop()
             void set_on_raw_frame(std::function<void(const uint8_t *, size_t)> &&callback) { _on_raw_frame = std::move(callback); }
