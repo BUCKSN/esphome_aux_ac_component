@@ -96,6 +96,13 @@ namespace esphome
             static constexpr const char* AC_FIRMWARE_VERSION = AUX_AC_FIRMWARE_VERSION;
 
             // custom fan modes
+#ifdef AUX_AC_LABELS_RU
+            static constexpr const char* MUTE = "Тихо";
+            static constexpr const char* TURBO = "Турбо";
+            static constexpr const char* CLEAN = "Чистка";
+            static constexpr const char* HEALTH = "Ион";
+            static constexpr const char* ANTIFUNGUS = "Продув";
+#else
             static constexpr const char* MUTE = "mute";
             static constexpr const char* TURBO = "turbo";
 
@@ -103,6 +110,7 @@ namespace esphome
             static constexpr const char* CLEAN = "Clean";
             static constexpr const char* HEALTH = "Health";
             static constexpr const char* ANTIFUNGUS = "Antifungus";
+#endif
 
             /// минимальная и максимальная температура в градусах Цельсия, ограничения самого кондиционера
             static constexpr const float AC_MIN_TEMPERATURE = 16.0;

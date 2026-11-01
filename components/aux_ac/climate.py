@@ -207,6 +207,7 @@ CONFIG_SCHEMA = cv.All(
             cv.GenerateID(): cv.declare_id(AirCon),
             cv.Optional(CONF_PERIOD, default="7s"): cv.time_period,
             cv.Optional(CONF_SHOW_ACTION, default="true"): cv.boolean,
+            cv.Optional("russian_labels", default=False): cv.boolean,
             cv.Optional(CONF_DISPLAY_INVERTED, default="false"): cv.boolean,
             cv.Optional(CONF_TIMEOUT, default=AC_PACKET_TIMEOUT_MIN): validate_packet_timeout,
             cv.Optional(CONF_OPTIMISTIC, default="true"): cv.boolean,
@@ -463,6 +464,8 @@ async def to_code(config):
         cg.add(var.set_inverter_power_limit_state_sensor(sens))
 
     cg.add(var.set_period(config[CONF_PERIOD].total_milliseconds))
+    if config["russian_labels"]:
+        cg.add_define("AUX_AC_LABELS_RU")
     cg.add(var.set_show_action(config[CONF_SHOW_ACTION]))
     cg.add(var.set_display_inverted(config[CONF_DISPLAY_INVERTED]))
     cg.add(var.set_packet_timeout(config[CONF_TIMEOUT]))
