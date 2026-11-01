@@ -623,6 +623,15 @@ namespace esphome
             AC_AUX_HEAT_UNTOUCHED = 0xFF
         };
 
+// Режим iFeel (кнопка "Я ТУТ" на пульте YKR-L/201E).
+#define AC_IFEEL_MASK 0b00001000
+        enum ac_ifeel : uint8_t
+        {
+            AC_IFEEL_OFF = 0x00,
+            AC_IFEEL_ON = 0x08,
+            AC_IFEEL_UNTOUCHED = 0xFF
+        };
+
 // маска счетчика минут прошедших с последней команды
 // https://github.com/GrKoR/AUX_HVAC_Protocol#packet_cmd_11_b12
 // GK: define убрал, т.к. считаю, что сбрасывать счетчик не надо.
@@ -720,6 +729,7 @@ namespace esphome
             ac_powLim_state power_lim_state; // статус ограничения мощности инвертора
             uint8_t power_lim_value;         // значение ограничения мощности инвертора
             ac_aux_heat aux_heat;            // дополнительный электронагрев
+            ac_ifeel ifeel;                  // режим iFeel
         };
 
         typedef ac_command_t ac_state_t; // текущее состояние параметров кондея можно хранить в таком же формате, как и комманды
@@ -1121,6 +1131,7 @@ namespace esphome
             {
                 cmd->clean = AC_CLEAN_UNTOUCHED;
                 cmd->aux_heat = AC_AUX_HEAT_UNTOUCHED;
+                cmd->ifeel = AC_IFEEL_UNTOUCHED;
                 cmd->display = AC_DISPLAY_UNTOUCHED;
                 cmd->fanMute = AC_FANMUTE_UNTOUCHED;
                 cmd->fanSpeed = AC_FANSPEED_UNTOUCHED;
@@ -1517,6 +1528,10 @@ namespace esphome
                         stateByte = small_info_body->status & AC_CLEAN_MASK;
                         stateChangedFlag = stateChangedFlag || (_current_ac_state.clean != (ac_clean)stateByte);
                         _current_ac_state.clean = (ac_clean)stateByte;
+
+                        stateByte = small_info_body->mode & AC_IFEEL_MASK;
+                        stateChangedFlag = stateChangedFlag || (_current_ac_state.ifeel != (ac_ifeel)stateByte);
+                        _current_ac_state.ifeel = (ac_ifeel)stateByte;
 
                         stateByte = small_info_body->status & AC_AUX_HEAT_MASK;
                         stateChangedFlag = stateChangedFlag || (_current_ac_state.aux_heat != (ac_aux_heat)stateByte);
@@ -1999,6 +2014,12 @@ namespace esphome
                 if (cmd->sleep != AC_SLEEP_UNTOUCHED)
                 {
                     pack->body[7] = (pack->body[7] & ~AC_SLEEP_MASK) | cmd->sleep;
+                }
+
+                // iFeel
+                if (cmd->ifeel != AC_IFEEL_UNTOUCHED)
+                {
+                    pack->body[7] = (pack->body[7] & ~AC_IFEEL_MASK) | cmd->ifeel;
                 }
 
                 // дополнительный электронагрев
@@ -3593,6 +3614,9 @@ namespace esphome
                 return commandSequence(&cmd);
             }
             bool get_aux_heat() { return _current_ac_state.aux_heat == AC_AUX_HEAT_ON; }
+
+            // iFeel ("Я ТУТ"): кондиционер принимает его только с пульта, поэтому доступно лишь чтение
+            bool get_ifeel() { return _current_ac_state.ifeel == AC_IFEEL_ON; }
 
             // подписка на все принятые пакеты: указатель на пакет и его длина, вызывается из loop()
             void set_on_raw_frame(std::function<void(const uint8_t *, size_t)> &&callback) { _on_raw_frame = std::move(callback); }
